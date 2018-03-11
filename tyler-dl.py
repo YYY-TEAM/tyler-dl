@@ -224,15 +224,22 @@ def main(args):
             time.sleep(0.5)
             if not os.path.exists(sectiondir):
                 os.mkdir(sectiondir)
+            lecture_title_num = 1
             for item in section_info:
                 lecture_url = item.get('lecture_url')
                 lecture_title = item.get('lecture_title')
+                if lecture_title_num < 10:
+                    lecture_title_numstr = '0' + str(lecture_title_num)
+                else:
+                    lecture_title_numstr = str(lecture_title_num)
+                lecture_title = lecture_title_numstr + ' - ' + lecture_title
                 lecture_type = item.get('lecture_type')
                 time.sleep(0.5)
                 if lecture_type == 'video':
                     get_video(s, lecture_url, lecture_title, sectiondir)
                 elif lecture_type == 'text':
                     get_text(s, lecture_url, lecture_title, sectiondir)
+                lecture_title_num += 1
 
 
 if __name__ == '__main__':
