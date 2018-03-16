@@ -8,6 +8,7 @@ import os
 import argparse
 import sys
 import time
+from colorama import init, Fore
 
 # -- Sidebar with lecture infos on course page:
 # - div class="row lecture-sidebar"
@@ -33,6 +34,8 @@ import time
 #         }
 #     ]
 # }
+
+init(autoreset=True)
 
 
 def get_lecture_list(session, url):
@@ -98,7 +101,7 @@ def get_lecture_list(session, url):
     return material
 
 
-def get_video(session, url, title, dir):
+def get_video(session, url, title, dir, quality):
     r = session.get(url, stream=True)
 
     for line in r.iter_lines():
@@ -108,14 +111,18 @@ def get_video(session, url, title, dir):
                 id + '.json'
             response_videos = requests.get(video_source_url)
             videos = response_videos.json()
+            filename = os.path.join(dir, title + '.mp4')
 
             for item in videos['media']['assets']:
-                if item['type'] == 'hd_mp4_video' and item['display_name'] == '720p':
+                if item['type'] == 'hd_mp4_video' and \
+                        item['display_name'] == quality:
                     video_file = item['url'].split('.bin')[0] + '.mp4'
-                    filename = os.path.join(dir, title + '.mp4')
                     with open(filename, 'wb') as fout:
-                        print 'Downloading ' + title + ' ...'
+                        print 'Downloading [V] ' + title + ' ...'
                         fout.write(requests.get(video_file).content)
+            if not os.path.isfile(filename):
+                print Fore.RED + '! WARNING: [V] {} ({}) could not be ' \
+                    'downloaded.'.format(title, video_source_url)
 
 
 def get_text(session, url, title, dir):
@@ -126,19 +133,24 @@ def get_text(session, url, title, dir):
         'lecture-attachment')[0].text_content().strip().encode('utf-8')
     filename = os.path.join(dir, title + '.txt')
     with open(filename, 'w') as fout:
-        print 'Downloading ' + title + ' ...'
+        print 'Downloading [T] ' + title + ' ...'
         fout.write(maintext)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Download video and text materials from Tyler McGinnis courses. You can chose the course form a menue.')
+        description='Download video and text materials from Tyler McGinnis \
+                     courses. You can chose the course form a menue.')
     parser.add_argument('-u', '--username', type=str,
                         help='Log-in username', required=True)
     parser.add_argument('-p', '--password', type=str,
                         help='Log-in password', required=True)
     parser.add_argument(
-        '-o', '--output', help='Directory for storing output files')
+        '-f', '--fullhd', help='Download videos in full HD (1080p) resolution, \
+                                default is 720p.', action='store_true')
+    parser.add_argument(
+        '-o', '--output', help='Directory for storing output files. Default is \
+                                the user\'shome directory.')
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 
     parsed_args = parser.parse_args()
@@ -200,6 +212,11 @@ def main(args):
         payload['user[password]'] = args.password
         response = s.post(urlLogin, data=payload)
 
+        if args.fullhd is True:
+            quality = '1080p'
+        else:
+            quality = '720p'
+
         defaultdir = os.path.expanduser("~")
         if args.output:
             outdir = args.output
@@ -220,7 +237,7 @@ def main(args):
 
         for section, section_info in material.iteritems():
             sectiondir = os.path.join(targetdir, section)
-            print '## ' + section
+            print '>' + section
             time.sleep(0.5)
             if not os.path.exists(sectiondir):
                 os.mkdir(sectiondir)
@@ -236,7 +253,8 @@ def main(args):
                 lecture_type = item.get('lecture_type')
                 time.sleep(0.5)
                 if lecture_type == 'video':
-                    get_video(s, lecture_url, lecture_title, sectiondir)
+                    get_video(s, lecture_url, lecture_title,
+                              sectiondir, quality)
                 elif lecture_type == 'text':
                     get_text(s, lecture_url, lecture_title, sectiondir)
                 lecture_title_num += 1
