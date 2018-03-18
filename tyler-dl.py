@@ -9,6 +9,7 @@ import argparse
 import sys
 import time
 from colorama import init, Fore
+from lxml.html.clean import Cleaner
 
 # -- Sidebar with lecture infos on course page:
 # - div class="row lecture-sidebar"
@@ -128,13 +129,20 @@ def get_video(session, url, title, dir, quality):
 def get_text(session, url, title, dir):
     r = session.get(url, stream=True)
     doc = lxml.html.fromstring(r.text)
-    # maintext = doc.find_class('lecture-text-container')[0].text_content()
-    maintext = doc.find_class(
-        'lecture-attachment')[0].text_content().strip().encode('utf-8')
-    filename = os.path.join(dir, title + '.txt')
+    sidebar = doc.find_class('course-sidebar')[0]
+    sidebar.getparent().remove(sidebar)
+
+    cleaner = Cleaner()
+    cleaner.javascript = True
+    cleaner.meta = True
+    cleaner.kill_tags = ['header']
+
+    cleantext = lxml.html.tostring(cleaner.clean_html(doc))
+
+    filename = os.path.join(dir, title + '.html')
     with open(filename, 'w') as fout:
         print 'Downloading [T] ' + title + ' ...'
-        fout.write(maintext)
+        fout.write(cleantext)
 
 
 def parse_args():
