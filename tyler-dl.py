@@ -148,6 +148,8 @@ def parse_args():
     parser.add_argument(
         '-f', '--fullhd', help='Download videos in full HD (1080p) resolution, \
                                 default is 720p.', action='store_true')
+    parser.add_argument('--skipvideo', help='No video.', action='store_true')
+    parser.add_argument('--skiptext', help='No text.', action='store_true')
     parser.add_argument(
         '-o', '--output', help='Directory for storing output files. Default is \
                                 the user\'shome directory.')
@@ -253,10 +255,12 @@ def main(args):
                 lecture_type = item.get('lecture_type')
                 time.sleep(0.5)
                 if lecture_type == 'video':
-                    get_video(s, lecture_url, lecture_title,
-                              sectiondir, quality)
+                    if args.skipvideo is False:
+                        get_video(s, lecture_url, lecture_title,
+                                  sectiondir, quality)
                 elif lecture_type == 'text':
-                    get_text(s, lecture_url, lecture_title, sectiondir)
+                    if args.skiptext is False:
+                        get_text(s, lecture_url, lecture_title, sectiondir)
                 lecture_title_num += 1
 
 
